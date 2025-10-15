@@ -37,7 +37,6 @@ from preprocessing.feature_engineering import (
     normalize_numeric_features,
 )
 from schemas.config import PipelineConfig
-from schemas.output import map_to_n6_schema
 from utils.config import load_config
 from utils.io import DataSourceConfig
 from utils.logging import get_logger
@@ -87,10 +86,9 @@ def run_pipeline(config_path: str | Path) -> Dict[str, str]:
         fused_gap_df, spoof_scores, rf_df, spoof_config
     )
 
-    n6_ready = map_to_n6_schema(corrected_df)
-
     output_cfg = OutputConfig(**config.output.dict())
-    output_artifacts = write_output(pd.DataFrame(n6_ready), output_cfg)  # type: ignore[arg-type]
+    fused_output = pd.DataFrame(corrected_df).copy()
+    output_artifacts = write_output(fused_output, output_cfg)
 
     audit_cfg = AuditConfig(**config.audit.dict())
     record_audit_event(
@@ -98,7 +96,7 @@ def run_pipeline(config_path: str | Path) -> Dict[str, str]:
             "event": "pipeline_completed",
             "gap_metrics": gap_metrics,
             "spoof_metrics": spoof_metrics,
-            "records_written": len(n6_ready),
+            "records_written": len(fused_output),
         },
         audit_cfg,
     )

@@ -38,8 +38,7 @@ pipeline:
     time_bucket_minutes: 5
   output:
     directory: ./outputs
-    format: parquet
-    partition_cols: ["mmsi", "date"]
+    format: csv
     manifest_name: manifest.json
   audit:
     directory: ./outputs/audit
