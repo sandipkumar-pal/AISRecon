@@ -1,18 +1,28 @@
 pipeline:
   ais_source:
-    type: local
-    path: ./data/ais.parquet
-    format: parquet
-    options: {}
-  rf_source:
     type: s3
-    format: parquet
+    format: zip
     s3:
-      bucket: maritime-rf-data
-      key: detections/2023-*.parquet
+      bucket: ihsm-mnt-esg-dev
+      key: Output/ShipMovements/2025/July/ShipMovements_202507020515.zip
       region: us-east-1
     options:
       storage_options: {}
+      inner_format: parquet
+      inner_path_pattern: "*.parquet"
+      inner_options: {}
+  rf_source:
+    type: s3
+    format: zip
+    s3:
+      bucket: unseen-labs.us-east-1.demo.aegir
+      key: data-delivery/
+      region: us-east-1
+    options:
+      storage_options: {}
+      inner_format: parquet
+      inner_path_pattern: "*.parquet"
+      inner_options: {}
   gap_fill:
     gap_threshold_minutes: 10
     candidate_radius_km: 25.0

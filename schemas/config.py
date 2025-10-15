@@ -1,7 +1,7 @@
 """Configuration schemas for the AIS-RF fusion pipeline."""
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -21,13 +21,29 @@ class DataSourceConfigSchema(BaseModel):
     type: str = Field(..., regex=r"^(s3|local)$")
     path: Optional[str]
     s3: Optional[S3Config]
-    format: str = Field(..., regex=r"^(csv|parquet)$")
-    options: Dict[str, str] = Field(default_factory=dict)
+    format: str = Field(..., regex=r"^(csv|parquet|zip)$")
+    options: Dict[str, Any] = Field(default_factory=dict)
 
     @validator("path")
     def validate_path(cls, value: Optional[str], values):  # type: ignore[override]
         # TODO: Ensure path provided for local sources.
         return value
+
+
+class OutputConfigSchema(BaseModel):
+    """Configuration schema for output writer."""
+
+    directory: str
+    format: str = Field("parquet", regex=r"^(csv|parquet)$")
+    partition_cols: List[str] = Field(default_factory=list)
+    manifest_name: str = "manifest.json"
+
+
+class AuditConfigSchema(BaseModel):
+    """Configuration schema for audit logging."""
+
+    directory: str
+    filename: str = "pipeline_audit.log"
 
 
 class PipelineConfig(BaseModel):
@@ -38,5 +54,5 @@ class PipelineConfig(BaseModel):
     gap_fill: Dict[str, float]
     spoof_detection: Dict[str, float]
     indexing: Dict[str, str]
-    output: Dict[str, str]
-    audit: Dict[str, str]
+    output: OutputConfigSchema
+    audit: AuditConfigSchema

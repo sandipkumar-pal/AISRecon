@@ -17,6 +17,7 @@ class RFIngestor:
     def load(self, columns: Optional[list[str]] = None) -> pd.DataFrame:
         """Load RF data as a DataFrame."""
         # TODO: Validate schema using schemas.records.RFRecord.
+        self._ensure_zip_defaults()
         df = read_dataframe(self.source_config, columns=columns)
         # TODO: Apply RF-specific filtering for frequency bands or platforms.
         return df
@@ -25,3 +26,12 @@ class RFIngestor:
         """Stream RF detections in batches for incremental processing."""
         # TODO: Implement chunked iteration or push-based streaming from RF providers.
         raise NotImplementedError("Batch iteration not yet implemented.")
+
+    def _ensure_zip_defaults(self) -> None:
+        """Inject default options when ingesting zipped RF deliveries."""
+        if self.source_config.format != "zip":
+            return
+        options = dict(self.source_config.options or {})
+        options.setdefault("inner_format", "parquet")
+        options.setdefault("inner_options", {})
+        self.source_config.options = options

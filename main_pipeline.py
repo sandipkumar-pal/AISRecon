@@ -89,10 +89,10 @@ def run_pipeline(config_path: str | Path) -> Dict[str, str]:
 
     n6_ready = map_to_n6_schema(corrected_df)
 
-    output_cfg = OutputConfig(**config.output)
+    output_cfg = OutputConfig(**config.output.dict())
     output_artifacts = write_output(pd.DataFrame(n6_ready), output_cfg)  # type: ignore[arg-type]
 
-    audit_cfg = AuditConfig(**config.audit)
+    audit_cfg = AuditConfig(**config.audit.dict())
     record_audit_event(
         {
             "event": "pipeline_completed",
