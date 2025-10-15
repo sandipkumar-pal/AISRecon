@@ -20,8 +20,8 @@ pipeline:
       region: us-east-1
     options:
       storage_options: {}
-      inner_format: parquet
-      inner_path_pattern: "*.parquet"
+      inner_format: csv
+      inner_path_pattern: "UNSEENLABS_SURMAR_20240706T155126Z_emitters.csv"
       inner_options: {}
   gap_fill:
     gap_threshold_minutes: 10
@@ -38,8 +38,7 @@ pipeline:
     time_bucket_minutes: 5
   output:
     directory: ./outputs
-    format: parquet
-    partition_cols: ["mmsi", "date"]
+    format: csv
     manifest_name: manifest.json
   audit:
     directory: ./outputs/audit
