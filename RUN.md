@@ -4,7 +4,7 @@
 1. Create a Python 3.10 virtual environment.
 2. Install dependencies:
    ```bash
-   pip install pandas pyarrow fastparquet pydantic s3fs pyyaml
+   pip install -r requirements.txt
    ```
 3. Adjust `config.yaml` to point at local or S3 inputs.
 4. Run the pipeline:
