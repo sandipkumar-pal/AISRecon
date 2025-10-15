@@ -2,6 +2,15 @@
 
 ## Local Execution
 1. Create a Python 3.10 virtual environment.
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+   On Windows PowerShell:
+   ```powershell
+   py -3.10 -m venv .venv
+   .venv\\Scripts\\Activate.ps1
+   ```
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
