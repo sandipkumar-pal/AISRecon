@@ -1,0 +1,36 @@
+pipeline:
+  ais_source:
+    type: local
+    path: ./data/ais.parquet
+    format: parquet
+    options: {}
+  rf_source:
+    type: s3
+    format: parquet
+    s3:
+      bucket: maritime-rf-data
+      key: detections/2023-*.parquet
+      region: us-east-1
+    options:
+      storage_options: {}
+  gap_fill:
+    gap_threshold_minutes: 10
+    candidate_radius_km: 25.0
+    viterbi_transition_penalty: 0.15
+    min_candidate_score: 0.6
+  spoof_detection:
+    residual_threshold_km: 20.0
+    spoof_score_threshold: 0.7
+    smoothing_window: 5
+  indexing:
+    type: h3
+    resolution: "7"
+    time_bucket_minutes: 5
+  output:
+    directory: ./outputs
+    format: parquet
+    partition_cols: ["mmsi", "date"]
+    manifest_name: manifest.json
+  audit:
+    directory: ./outputs/audit
+    filename: pipeline_audit.log
