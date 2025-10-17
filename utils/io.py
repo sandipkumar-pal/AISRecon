@@ -2,10 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from fnmatch import fnmatch
-import io
 from typing import Any, Dict, Optional
-import zipfile
 
 import pandas as pd
 
@@ -32,9 +29,9 @@ class DataSourceConfig:
 
 
 def read_dataframe(config: DataSourceConfig, columns: Optional[list[str]] = None) -> pd.DataFrame:
-    """Generic DataFrame reader supporting CSV, Parquet, and zipped payloads."""
+    """Generic DataFrame reader supporting CSV and Parquet from local or S3."""
     logger.info("Reading %s data from %s", config.format, config.type)
-    read_options = dict(config.options or {})
+    read_options = config.options or {}
     if config.type == "local":
         if not config.path:
             raise ValueError("Local data source requires 'path'.")
@@ -50,8 +47,6 @@ def _read_local(path: str, fmt: str, columns: Optional[list[str]], options: Dict
         return pd.read_parquet(path, columns=columns, **options)
     if fmt == "csv":
         return pd.read_csv(path, usecols=columns, **options)
-    if fmt == "zip":
-        return _read_zip_archive(path, columns, options)
     raise ValueError(f"Unsupported local format: {fmt}")
 
 
@@ -66,65 +61,12 @@ def _read_s3(config: DataSourceConfig, columns: Optional[list[str]], options: Di
     profile = config.s3.get("profile")
     if not bucket or not key:
         raise ValueError("S3 configuration must include 'bucket' and 'key'.")
+    fs = s3fs.S3FileSystem(profile=profile) if profile else s3fs.S3FileSystem()
     s3_path = f"{bucket}/{key}"
     logger.debug("Reading from S3 path %s", s3_path)
-    storage_options = options.pop("storage_options", {})
-    if profile:
-        storage_options.setdefault("profile", profile)
-    fs = s3fs.S3FileSystem(**storage_options)
-    with fs.open(s3_path, "rb") as f:
+    with fs.open(s3_path) as f:
         if config.format == "parquet":
             return pd.read_parquet(f, columns=columns, **options)
         if config.format == "csv":
             return pd.read_csv(f, usecols=columns, **options)
-        if config.format == "zip":
-            data = f.read()
-            buffer = io.BytesIO(data)
-            return _read_zip_archive(buffer, columns, options)
         raise ValueError(f"Unsupported S3 format: {config.format}")
-
-
-def _read_zip_archive(path_or_buffer: Any, columns: Optional[list[str]], options: Dict[str, Any]) -> pd.DataFrame:
-    """Extract and read a DataFrame from within a ZIP archive."""
-    inner_format = options.pop("inner_format", "parquet")
-    inner_pattern = options.pop("inner_path_pattern", None)
-    inner_options = options.pop("inner_options", {})
-
-    # Retain unused option keys for future extensibility without failing silently.
-    if options:
-        logger.debug("Unused ZIP read options provided: %s", options)
-
-    with zipfile.ZipFile(path_or_buffer) as archive:
-        member_name = _select_zip_member(archive.namelist(), inner_pattern, inner_format)
-        if member_name is None:
-            raise FileNotFoundError("No matching file found in ZIP archive.")
-        with archive.open(member_name) as member:
-            payload = member.read()
-    buffer = io.BytesIO(payload)
-
-    if inner_format == "parquet":
-        return pd.read_parquet(buffer, columns=columns, **inner_options)
-    if inner_format == "csv":
-        buffer.seek(0)
-        return pd.read_csv(buffer, usecols=columns, **inner_options)
-    raise ValueError(f"Unsupported inner format for ZIP archive: {inner_format}")
-
-
-def _select_zip_member(members: list[str], pattern: Optional[str], inner_format: str) -> Optional[str]:
-    """Select a file entry from the ZIP archive matching the desired format."""
-    if pattern:
-        for name in members:
-            if fnmatch(name, pattern):
-                return name
-
-    suffix_map = {"parquet": ".parquet", "csv": ".csv"}
-    suffix = suffix_map.get(inner_format)
-    if suffix:
-        for name in members:
-            if name.lower().endswith(suffix):
-                return name
-
-    for name in members:
-        if not name.endswith("/"):
-            return name
-    return None

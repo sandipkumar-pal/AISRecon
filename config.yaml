@@ -8,9 +8,6 @@ pipeline:
       region: us-east-1
     options:
       storage_options: {}
-      inner_format: parquet
-      inner_path_pattern: "*.parquet"
-      inner_options: {}
   rf_source:
     type: s3
     format: zip
@@ -20,9 +17,6 @@ pipeline:
       region: us-east-1
     options:
       storage_options: {}
-      inner_format: parquet
-      inner_path_pattern: "*.parquet"
-      inner_options: {}
   gap_fill:
     gap_threshold_minutes: 10
     candidate_radius_km: 25.0
