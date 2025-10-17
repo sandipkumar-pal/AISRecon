@@ -32,12 +32,6 @@ class RFIngestor:
         if self.source_config.format != "zip":
             return
         options = dict(self.source_config.options or {})
-        target_member = "UNSEENLABS_SURMAR_20240706T155126Z_emitters.csv"
-        if options.get("inner_path_pattern") is None:
-            options["inner_path_pattern"] = target_member
-        if options.get("inner_path_pattern") == target_member:
-            options["inner_format"] = "csv"
-        options.setdefault("inner_format", "csv")
-        inner_options = dict(options.get("inner_options") or {})
-        options["inner_options"] = inner_options
+        options.setdefault("inner_format", "parquet")
+        options.setdefault("inner_options", {})
         self.source_config.options = options

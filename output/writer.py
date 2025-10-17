@@ -18,7 +18,7 @@ class OutputConfig:
     """Configuration for writing fused outputs."""
 
     directory: str
-    format: str = "csv"
+    format: str = "parquet"
     partition_cols: Optional[list[str]] = None
     manifest_name: str = "manifest.json"
 
@@ -32,10 +32,6 @@ def write_output(df: pd.DataFrame, config: OutputConfig) -> Dict[str, Any]:
         logger.info("Writing Parquet output to %s", output_path)
         # TODO: Add partitioned writes using pyarrow or fastparquet.
         df.to_parquet(output_path, index=False)
-    elif config.format == "csv":
-        output_path = target_dir / "fused_output.csv"
-        logger.info("Writing CSV output to %s", output_path)
-        df.to_csv(output_path, index=False)
     else:
         raise ValueError(f"Unsupported output format: {config.format}")
     manifest = _write_manifest(df, target_dir / config.manifest_name)

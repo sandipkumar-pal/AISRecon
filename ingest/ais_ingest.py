@@ -101,9 +101,8 @@ class AISIngestor:
         if self.options.event_year and "inner_path_pattern" not in options:
             options["inner_path_pattern"] = f"*{self.options.event_year}*"
         inner_options = dict(options.get("inner_options") or {})
-        if options["inner_format"] == "csv":
-            inner_options.setdefault("sep", "\t")
-            inner_options.setdefault("encoding", "latin-1")
+        inner_options.setdefault("sep", "\t")
+        inner_options.setdefault("encoding", "latin-1")
         options["inner_options"] = inner_options
         self.source_config.options = options
 
