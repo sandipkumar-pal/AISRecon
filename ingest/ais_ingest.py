@@ -76,14 +76,7 @@ class AISIngestor:
         """
         # TODO: Enforce schema validation using schemas.records.AISRecord.
         self._ensure_zip_defaults()
-        raw_df = read_dataframe(self.source_config)
-        logger.debug("Loaded raw AIS frame with shape: %s", raw_df.shape)
-        standardised = self._standardise(raw_df)
-        if columns:
-            missing = sorted(set(columns) - set(standardised.columns))
-            if missing:
-                logger.warning("Requested columns %s missing from AIS payload", missing)
-            standardised = standardised[[c for c in columns if c in standardised.columns]]
+        df = read_dataframe(self.source_config, columns=columns)
         # TODO: Apply lazy chunked loading if dataset exceeds memory constraints.
         return standardised
 
@@ -97,64 +90,6 @@ class AISIngestor:
         if self.source_config.format != "zip":
             return
         options = dict(self.source_config.options or {})
-        options.setdefault("inner_format", "csv")
-        if self.options.event_year and "inner_path_pattern" not in options:
-            options["inner_path_pattern"] = f"*{self.options.event_year}*"
-        inner_options = dict(options.get("inner_options") or {})
-        inner_options.setdefault("sep", "\t")
-        inner_options.setdefault("encoding", "latin-1")
-        options["inner_options"] = inner_options
+        options.setdefault("inner_format", "parquet")
+        options.setdefault("inner_options", {})
         self.source_config.options = options
-
-    def _standardise(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Select, rename, and type-cast AIS raw columns."""
-        available_columns = [c for c in DEFAULT_SOURCE_COLUMNS if c in df.columns]
-        if not available_columns:
-            logger.error("AIS payload missing expected columns: %s", DEFAULT_SOURCE_COLUMNS)
-            return df
-        subset = df[available_columns].copy()
-        subset = subset.rename(columns={k: v for k, v in DEFAULT_RENAME_MAP.items() if k in subset.columns})
-        subset = self._convert_types(subset)
-        subset["source_system"] = self.options.source_system
-        timestamps = pd.to_datetime(subset["ts_utc"], errors="coerce", utc=True)
-        subset["event_date"] = timestamps.dt.date
-        subset["event_year"] = (
-            pd.Series(timestamps.dt.year, index=subset.index).astype("Int64")
-        )
-        epoch_ms = pd.Series(timestamps.view("int64"), index=subset.index) // 1_000_000
-        subset["ts_utc"] = epoch_ms.where(~timestamps.isna(), pd.NA).astype("Int64")
-        subset["timestamp"] = timestamps
-        ordered_cols = [
-            "mmsi",
-            "imo",
-            "call_sign",
-            "ts_utc",
-            "timestamp",
-            "lat",
-            "lon",
-            "sog",
-            "cog",
-            "nav_status",
-            "draught",
-            "movement_id",
-            "destination",
-            "position_accuracy",
-            "source_system",
-            "event_date",
-            "event_year",
-        ]
-        existing = [c for c in ordered_cols if c in subset.columns]
-        remaining = [c for c in subset.columns if c not in existing]
-        return subset[existing + remaining]
-
-    def _convert_types(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Cast core AIS columns to canonical dtypes."""
-        if "imo" in df.columns:
-            df["imo"] = pd.to_numeric(df["imo"], errors="coerce").astype("Int64")
-        if "mmsi" in df.columns:
-            df["mmsi"] = df["mmsi"].astype(str).str.strip()
-        numeric_fields = ["lat", "lon", "sog", "cog", "draught", "position_accuracy"]
-        for field in numeric_fields:
-            if field in df.columns:
-                df[field] = pd.to_numeric(df[field], errors="coerce")
-        return df
